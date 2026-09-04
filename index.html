@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>아들을 위한 영어 공부 앱 🎓</title>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', sans-serif; background: #f0f4ff; min-height: 100vh; }
+  
+  header {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    text-align: center;
+    padding: 20px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  }
+  header h1 { font-size: 2em; margin-bottom: 5px; }
+  header p { opacity: 0.9; font-size: 1em; }
+
+  nav {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    padding: 15px;
+    background: white;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  nav button {
+    padding: 10px 18px;
+    border: none;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 0.9em;
+    font-weight: 600;
+    transition: all 0.3s;
+    background: #e8eaf6;
+    color: #3f51b5;
+  }
+  nav button.active {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    box-shadow: 0 4px 12px rgba(102,126,234,0.5);
+    transform: translateY(-2px);
+  }
+  nav button:hover:not(.active) { background: #c5cae9; transform: translateY(-1px); }
+
+  .section { display: none; padding: 20px; max-width: 1200px; margin: 0 auto; }
+  .section.active { display: block; }
+
+  h2.section-title {
+    text-align: center;
+    font-size: 1.8em;
+    color: #3f51b5;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 3px solid #667eea;
+  }
+
+  /* Alphabet Grid */
+  .alphabet-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 12px;
+    margin-top: 10px;
+  }
+  .alpha-card {
+    background: white;
+    border-radius: 16px;
+    padding: 20px 10px;
+    text-align: center;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transition: all 0.2s;
+    border: 3px solid transparent;
+    user-select: none;
+  }
+  .alpha-card:hover { transform: scale(1.08); border-color: #667eea; }
+  .alpha-card:active { transform: scale(0.95); }
+  .alpha-card .big-letter { font-size: 2.8em; font-weight: 700; }
+  .alpha-card .small-letter { font-size: 1.5em; color: #666; margin-top: 4px; }
+  .alpha-card .sound-label { font-size: 0.65em; color: #999; margin-top: 4px; }
+  .alpha-card.playing { background: linear-gradient(135deg, #fff3cd, #ffeaa7); border-color: #f39c12; }
+
+  .mode-tabs {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .mode-tab {
+    padding: 8px 20px;
+    border-radius: 20px;
+    border: 2px solid #667eea;
+    background: white;
+    color: #667eea;
+    cursor: pointer;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+  .mode-tab.active { background: #667eea; color: white; }
+
+  /* Words Section */
+  .level-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 20px;
+  }
+  .level-tab {
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: 2px solid #4caf50;
+    background: white;
+    color: #4caf50;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.85em;
+    transition: all 0.2s;
+  }
+  .level-tab.active { background: #4caf50; color: white; }
+
+  .words-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 15px;
+  }
+  .word-card {
+    background: white;
+    border-radius: 16px;
+    padding: 15px;
+    text-align: center;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transition: all 0.2s;
+    border: 3px solid transparent;
+  }
+  .word-card:hover { transform: translateY(-4px); border-color: #4caf50; }
+  .word-card:active { transform: scale(0.97); }
+  .word-card.playing { background: linear-gradient(135deg, #e8f5e9, #c8e6c9); border-color: #4caf50; }
+  .word-card .word-emoji { font-size: 2.5em; margin-bottom: 8px; }
+  .word-card .word-text { font-size: 1.2em; font-weight: 700; color: #333; }
+  .word-card .word-meaning { font-size: 0.85em; color: #666; margin-top: 4px; }
+  .word-card .word-level { font-size: 0.7em; color: #999; margin-top: 3px; }
+
+  /* Sentences Section */
+  .sentences-container { max-width: 800px; margin: 0 auto; }
+  .sentence-card {
+    background: white;
+    border-radius: 16px;
+    padding: 20px;
+    margin-bottom: 15px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    border-left: 5px solid #ff6b6b;
+    transition: all 0.2s;
+  }
+  .sentence-card:hover { transform: translateX(4px); }
+  .sentence-card .sentence-en {
+    font-size: 1.3em;
+    font-weight: 700;
+    color: #333;
+    margin-bottom: 6px;
+  }
+  .sentence-card .sentence-ko {
+    font-size: 0.95em;
+    color: #666;
+    margin-bottom: 10px;
+  }
+  .sentence-card .sentence-category {
+    display: inline-block;
+    padding: 3px 10px;
+    background: #ffe0e0;
+    color: #ff6b6b;
+    border-radius: 10px;
+    font-size: 0.75em;
+    font-weight: 600;
+    margin-bottom: 10px;
+  }
+  .btn-speak {
+    padding: 8px 20px;
+    background: linear-gradient(135deg, #ff6b6b, #ee5a24);
+    color: white;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.9em;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+  .btn-speak:hover { transform: scale(1.05); box-shadow: 0 4px 10px rgba(255,107,107,0.4); }
+  .btn-speak:active { transform: scale(0.97); }
+
+  .sentence-filter {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 20px;
+  }
+  .sentence-filter button {
+    padding: 7px 15px;
+    border-radius: 18px;
+    border: 2px solid #ff6b6b;
+    background: white;
+    color: #ff6b6b;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.82em;
+    transition: all 0.2s;
+  }
+  .sentence-filter button.active { background: #ff6b6b; color: white; }
+
+  /* Progress Bar */
+  .progress-bar-wrap { background: #e0e0e0; border-radius: 10px; height: 8px; margin-bottom: 20px; }
+  .progress-bar-fill { background: linear-gradient(90deg, #667eea, #764ba2); height: 100%; border-radius: 10px; transition: width 0.5s; }
+
+  /* Toast */
+  #toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: #333;
+    color: white;
+    padding: 12px 25px;
+    border-radius: 25px;
+    font-size: 0.95em;
+    transition: transform 0.3s;
+    z-index: 999;
+    pointer-events: none;
+  }
+  #toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* Stats */
+  .stats-bar {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+  }
+  .stat-box {
+    background: white;
+    border-radius: 12px;
+    padding: 12px 20px;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    min-width: 100px;
+  }
+  .stat-box .stat-num { font-size: 1.8em; font-weight: 700; color: #667eea; }
+  .stat-box .stat-label { font-size: 0.75em; color: #999; margin-top: 2px; }
+
+  .search-box {
+    width: 100%;
+    max-width: 400px;
+    display: block;
+    margin: 0 auto 20px;
+    padding: 10px 20px;
+    border: 2px solid #c5cae9;
+    border-radius: 25px;
+    font-size: 1em;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .search-box:focus { border-color: #667eea; }
+
+  @media (max-width: 600px) {
+    header h1 { font-size: 1.5em; }
+    nav button { font-size: 0.8em; padding: 8px 12px; }
+    .alpha-card .big-letter { font-size: 2em; }
+    .words-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+  }
+
+  /* Highlight animation */
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(102,126,234,0.7); }
+    70% { box-shadow: 0 0 0 15px rgba(102,126,234,0); }
+    100% { box-shadow: 0 0 0 0 rgba(102,126,234,0); }
+  }
+  .pulse { animation: pulse 0.6s ease-out; }
+
+  .color-a { color: #e74c3c; }
+  .color-b { color: #e67e22; }
+  .color-c { color: #f39c12; }
+  .color-d { color: #2ecc71; }
+  .color-e { color: #1abc9c; }
+  .color-f { color: #3498db; }
+  .color-g { color: #9b59b6; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🌟 영어 공부 앱 🌟</h1>
+  <p>알파벳부터 문장까지! 함께 배워보자!</p>
+</header>
+
+<nav>
+  <button class="active" onclick="showSection('alphabet')">🔤 대문자</button>
+  <button onclick="showSection('lowercase')">🔡 소문자</button>
+  <button onclick="showSection('mixed')">🔀 섞기</button>
+  <button onclick="showSection('words')">📖 단어</button>
+  <button onclick="showSection('sentences')">💬 문장</button>
+</nav>
+
+<!-- UPPERCASE ALPHABET -->
+<div id="section-alphabet" class="section active">
+  <h2 class="section-title">🔤 대문자 알파벳</h2>
+  <p style="text-align:center;color:#666;margin-bottom:15px;">클릭하면 발음이 나와요! 🔊</p>
+  <div class="alphabet-grid" id="uppercase-grid"></div>
+</div>
+
+<!-- LOWERCASE ALPHABET -->
+<div id="section-lowercase" class="section">
+  <h2 class="section-title">🔡 소문자 알파벳</h2>
+  <p style="text-align:center;color:#666;margin-bottom:15px;">클릭하면 발음이 나와요! 🔊</p>
+  <div class="alphabet-grid" id="lowercase-grid"></div>
+</div>
+
+<!-- MIXED ALPHABET -->
+<div id="section-mixed" class="section">
+  <h2 class="section-title">🔀 대소문자 섞기</h2>
+  <p style="text-align:center;color:#666;margin-bottom:15px;">대문자와 소문자를 함께 공부해요! 🔊</p>
+  <div style="text-align:center;margin-bottom:15px;">
+    <button class="mode-tab active" onclick="shuffleMixed(this)">🔀 섞기</button>
+    <button class="mode-tab" onclick="resetMixed(this)">↩️ 순서대로</button>
+  </div>
+  <div class="alphabet-grid" id="mixed-grid"></div>
+</div>
+
+<!-- WORDS -->
+<div id="section-words" class="section">
+  <h2 class="section-title">📖 영어 단어 500개</h2>
+  <div class="stats-bar">
+    <div class="stat-box"><div class="stat-num" id="word-count">500</div><div class="stat-label">전체 단어</div></div>
+    <div class="stat-box"><div class="stat-num" id="learned-count">0</div><div class="stat-label">학습한 단어</div></div>
+  </div>
+  <input type="text" class="search-box" placeholder="🔍 단어 검색..." oninput="filterWords(this.value)">
+  <div class="level-tabs">
+    <button class="level-tab active" onclick="filterLevel('all', this)">전체</button>
+    <button class="level-tab" onclick="filterLevel('초1-2', this)">초1-2학년</button>
+    <button class="level-tab" onclick="filterLevel('초3-4', this)">초3-4학년</button>
+    <button class="level-tab" onclick="filterLevel('초5-6', this)">초5-6학년</button>
+    <button class="level-tab" onclick="filterLevel('중학', this)">중학교</button>
+  </div>
+  <div class="words-grid" id="words-grid"></div>
+</div>
+
+<!-- SENTENCES -->
+<div id="section-sentences" class="section">
+  <h2 class="section-title">💬 문장 연습</h2>
+  <div class="sentence-filter">
+    <button class="active" onclick="filterSentence('all', this)">전체</button>
+    <button onclick="filterSentence('인사', this)">👋 인사</button>
+    <button onclick="filterSentence('일상', this)">🌞 일상</button>
+    <button onclick="filterSentence('학교', this)">🏫 학교</button>
+    <button onclick="filterSentence('감정', this)">😊 감정</button>
+    <button onclick="filterSentence('질문', this)">❓ 질문</button>
+    <button onclick="filterSentence('숫자', this)">🔢 숫자/색</button>
+  </div>
+  <div class="sentences-container" id="sentences-container"></div>
+</div>
+
+<div id="toast">🔊 발음 재생 중...</div>
+
+<script>
+const firebaseConfig = {"apiKey":"AIzaSyAA9XxN-Pw0vbLT0f8-mI2bV0FgEx18iIU","authDomain":"appbuilder-4e83c.firebaseapp.com","projectId":"appbuilder-4e83c","storageBucket":"appbuilder-4e83c.firebasestorage.app","messagingSenderId":"1038242551917","appId":"1:1038242551917:web:4d59995638762401dd0764"};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
+// ===================== DATA =====================
+
+const alphabetData = [
+  {upper:'A',lower:'a',sound:'A',phonics:'에이'},
+  {upper:'B',lower:'b',sound:'B',phonics:'비'},
+  {upper:'C',lower:'c',sound:'C',phonics:'씨'},
+  {upper:'D',lower:'d',sound:'D',phonics:'디'},
+  {upper:'E',lower:'e',sound:'E',phonics:'이'},
+  {upper:'F',lower:'f',sound:'F',phonics:'에프'},
+  {upper:'G',lower:'g',sound:'G',phonics:'지'},
+  {upper:'H',lower:'h',sound:'H',phonics:'에이치'},
+  {upper:'I',lower:'i',sound:'I',phonics:'아이'},
+  {upper:'J',lower:'j',sound:'J',phonics:'제이'},
+  {upper:'K',lower:'k',sound:'K',phonics:'케이'},
+  {upper:'L',lower:'l',sound:'L',phonics:'엘'},
+  {upper:'M',lower:'m',sound:'M',phonics:'엠'},
+  {upper:'N',lower:'n',sound:'N',phonics:'엔'},
+  {upper:'O',lower:'o',sound:'O',phonics:'오'},
+  {upper:'P',lower:'p',sound:'P',phonics:'피'},
+  {upper:'Q',lower:'q',sound:'Q',phonics:'큐'},
+  {upper:'R',lower:'r',sound:'R',phonics:'알'},
+  {upper:'S',lower:'s',sound:'S',phonics:'에스'},
+  {upper:'T',lower:'t',sound:'T',phonics:'티'},
+  {upper:'U',lower:'u',sound:'U',phonics:'유'},
+  {upper:'V',lower:'v',sound:'V',phonics:'브이'},
+  {upper:'W',lower:'w',sound:'W',phonics:'더블유'},
+  {upper:'X',lower:'x',sound:'X',phonics:'엑스'},
+  {upper:'Y',lower:'y',sound:'Y',phonics:'와이'},
+  {upper:'Z',lower:'z',sound:'Z',phonics:'지/제트'},
+];
+
+const colors = ['#e74c3c','#e67e22','#f39c12','#2ecc71','#1abc9c','#3498db','#9b59b6','#e91e63','#ff5722','#607d8b','#795548','#009688','#4caf50','#8bc34a','#cddc39','#ffc107','#ff9800','#f44336','#2196f3','#00bcd4','#673ab7','#3f51b5','#9c27b0','#e91e63','#ff6b6b','#4ecdc4'];
+
+// 500 Words Data
+const wordsData = [
+  // 초1-2
+  {word:'apple',meaning:'사과',emoji:'🍎',level:'초1-2'},
+  {word:'banana',meaning:'바나나',emoji:'🍌',level:'초1-2'},
+  {word:'cat',meaning:'고양이',emoji:'🐱',level:'초1-2'},
+  {word:'dog',meaning:'개',emoji:'🐶',level:'초1-2'},
+  {word:'egg',meaning:'달걀',emoji:'🥚',level:'초1-2'},
+  {word:'fish',meaning:'물고기',emoji:'🐟',level:'초1-2'},
+  {word:'grape',meaning:'포도',emoji:'🍇',level:'초1-2'},
+  {word:'hat',meaning:'모자',emoji:'🎩',level:'초1-2'},
+  {word:'ice',meaning:'얼음',emoji:'🧊',level:'초1-2'},
+  {word:'juice',meaning:'주스',emoji:'🧃',level:'초1-2'},
+  {word:'kite',meaning:'연',emoji:'🪁',level:'초1-2'},
+  {word:'lion',meaning:'사자',emoji:'🦁',level:'초1-2'},
+  {word:'moon',meaning:'달',emoji:'🌙',level:'초1-2'},
+  {word:'nose',meaning:'코',emoji:'👃',level:'초1-2'},
+  {word:'orange',meaning:'오렌지',emoji:'🍊',level:'초1-2'},
+  {word:'pig',meaning:'돼지',emoji:'🐷',level:'초1-2'},
+  {word:'queen',meaning:'여왕',emoji:'👑',level:'초1-2'},
+  {word:'rabbit',meaning:'토끼',emoji:'🐰',level:'초1-2'},
+  {word:'sun',meaning:'태양',emoji:'☀️',level:'초1-2'},
+  {word:'tree',meaning:'나무',emoji:'🌳',level:'초1-2'},
+  {word:'umbrella',meaning:'우산',emoji:'☂️',level:'초1-2'},
+  {word:'van',meaning:'밴',emoji:'🚐',level:'초1-2'},
+  {word:'water',meaning:'물',emoji:'💧',level:'초1-2'},
+  {word:'box',meaning:'상자',emoji:'📦',level:'초1-2'},
+  {word:'yellow',meaning:'노란색',emoji:'💛',level:'초1-2'},
+  {word:'zoo',meaning:'동물원',emoji:'🦒',level:'초1-2'},
+  {word:'bird',meaning:'새',emoji:'🐦',level:'초1-2'},
+  {word:'ball',meaning:'공',emoji:'⚽',level:'초1-2'},
+  {word:'book',meaning:'책',emoji:'📚',level:'초1-2'},
+  {word:'bus',meaning:'버스',emoji:'🚌',level:'초1-2'},
+  {word:'cake',meaning:'케이크',emoji:'🎂',level:'초1-2'},
+  {word:'car',meaning:'자동차',emoji:'🚗',level:'초1-2'},
+  {word:'clock',meaning:'시계',emoji:'🕐',level:'초1-2'},
+  {word:'cow',meaning:'소',emoji:'🐄',level:'초1-2'},
+  {word:'cup',meaning:'컵',emoji:'☕',level:'초1-2'},
+  {word:'desk',meaning:'책상',emoji:'🪑',level:'초1-2'},
+  {word:'door',meaning:'문',emoji:'🚪',level:'초1-2'},
+  {word:'duck',meaning:'오리',emoji:'🦆',level:'초1-2'},
+  {word:'ear',meaning:'귀',emoji:'👂',level:'초1-2'},
+  {word:'eye',meaning:'눈',emoji:'👁️',level:'초1-2'},
+  {word:'farm',meaning:'농장',emoji:'🚜',level:'초1-2'},
+  {word:'flag',meaning:'깃발',emoji:'🚩',level:'초1-2'},
+  {word:'flower',meaning:'꽃',emoji:'🌸',level:'초1-2'},
+  {word:'frog',meaning:'개구리',emoji:'🐸',level:'초1-2'},
+  {word:'gift',meaning:'선물',emoji:'🎁',level:'초1-2'},
+  {word:'girl',meaning:'여자아이',emoji:'👧',level:'초1-2'},
+  {word:'boy',meaning:'남자아이',emoji:'👦',level:'초1-2'},
+  {word:'hand',meaning:'손',emoji:'✋',level:'초1-2'},
+  {word:'home',meaning:'집',emoji:'🏠',level:'초1-2'},
+  {word:'horse',meaning:'말',emoji:'🐴',level:'초1-2'},
+
+  // 초3-4
+  {word:'airplane',meaning:'비행기',emoji:'✈️',level:'초3-4'},
+  {word:'airport',meaning:'공항',emoji:'🛫',level:'초3-4'},
+  {word:'angry',meaning:'화난',emoji:'😠',level:'초3-4'},
+  {word:'animal',meaning:'동물',emoji:'🦊',level:'초3-4'},
+  {word:'answer',meaning:'대답',emoji:'💬',level:'초3-4'},
+  {word:'arm',meaning:'팔',emoji:'💪',level:'초3-4'},
+  {word:'baby',meaning:'아기',emoji:'👶',level:'초3-4'},
+  {word:'back',meaning:'뒤/등',emoji:'↩️',level:'초3-4'},
+  {word:'bag',meaning:'가방',emoji:'👜',level:'초3-4'},
+  {word:'baseball',meaning:'야구',emoji:'⚾',level:'초3-4'},
+  {word:'basket',meaning:'바구니',emoji:'🧺',level:'초3-4'},
+  {word:'basketball',meaning:'농구',emoji:'🏀',level:'초3-4'},
+  {word:'beach',meaning:'해변',emoji:'🏖️',level:'초3-4'},
+  {word:'bear',meaning:'곰',emoji:'🐻',level:'초3-4'},
+  {word:'bed',meaning:'침대',emoji:'🛏️',level:'초3-4'},
+  {word:'big',meaning:'큰',emoji:'🔴',level:'초3-4'},
+  {word:'black',meaning:'검은색',emoji:'⬛',level:'초3-4'},
+  {word:'blue',meaning:'파란색',emoji:'🔵',level:'초3-4'},
+  {word:'bread',meaning:'빵',emoji:'🍞',level:'초3-4'},
+  {word:'breakfast',meaning:'아침식사',emoji:'🍳',level:'초3-4'},
+  {word:'bridge',meaning:'다리',emoji:'🌉',level:'초3-4'},
+  {word:'brother',meaning:'형제',emoji:'👦',level:'초3-4'},
+  {word:'brown',meaning:'갈색',emoji:'🟤',level:'초3-4'},
+  {word:'butterfly',meaning:'나비',emoji:'🦋',level:'초3-4'},
+  {word:'camera',meaning:'카메라',emoji:'📷',level:'초3-4'},
+  {word:'candy',meaning:'사탕',emoji:'🍬',level:'초3-4'},
+  {word:'chair',meaning:'의자',emoji:'🪑',level:'초3-4'},
+  {word:'cheese',meaning:'치즈',emoji:'🧀',level:'초3-4'},
+  {word:'chicken',meaning:'닭',emoji:'🐔',level:'초3-4'},
+  {word:'child',meaning:'어린이',emoji:'🧒',level:'초3-4'},
+  {word:'chocolate',meaning:'초콜릿',emoji:'🍫',level:'초3-4'},
+  {word:'circle',meaning:'원',emoji:'⭕',level:'초3-4'},
+  {word:'city',meaning:'도시',emoji:'🏙️',level:'초3-4'},
+  {word:'class',meaning:'수업/반',emoji:'🏫',level:'초3-4'},
+  {word:'clean',meaning:'깨끗한',emoji:'✨',level:'초3-4'},
+  {word:'cloud',meaning:'구름',emoji:'☁️',level:'초3-4'},
+  {word:'coat',meaning:'코트',emoji:'🧥',level:'초3-4'},
+  {word:'coffee',meaning:'커피',emoji:'☕',level:'초3-4'},
+  {word:'cold',meaning:'추운',emoji:'🥶',level:'초3-4'},
+  {word:'color',meaning:'색깔',emoji:'🎨',level:'초3-4'},
+  {word:'computer',meaning:'컴퓨터',emoji:'💻',level:'초3-4'},
+  {word:'cook',meaning:'요리하다',emoji:'👨‍🍳',level:'초3-4'},
+  {word:'cookie',meaning:'쿠키',emoji:'🍪',level:'초3-4'},
+  {word:'country',meaning:'나라',emoji:'🌍',level:'초3-4'},
+  {word:'crayon',meaning:'크레용',emoji:'🖍️',level:'초3-4'},
+  {word:'dance',meaning:'춤추다',emoji:'💃',level:'초3-4'},
+  {word:'dark',meaning:'어두운',emoji:'🌑',level:'초3-4'},
+  {word:'day',meaning:'날',emoji:'📅',level:'초3-4'},
+  {word:'dinner',meaning:'저녁식사',emoji:'🍽️',level:'초3-4'},
+  {word:'dirty',meaning:'더러운',emoji:'🦠',level:'초3-4'},
+
+  // 초3-4 continued
+  {word:'doctor',meaning:'의사',emoji:'👨‍⚕️',level:'초3-4'},
+  {word:'draw',meaning:'그리다',emoji:'✏️',level:'초3-4'},
+  {word:'dream',meaning:'꿈',emoji:'💭',level:'초3-4'},
+  {word:'dress',meaning:'원피스',emoji:'👗',level:'초3-4'},
+  {word:'drink',meaning:'마시다',emoji:'🥤',level:'초3-4'},
+  {word:'drive',meaning:'운전하다',emoji:'🚗',level:'초3-4'},
+  {word:'drum',meaning:'드럼',emoji:'🥁',level:'초3-4'},
+  {word:'earth',meaning:'지구',emoji:'🌍',level:'초3-4'},
+  {word:'eat',meaning:'먹다',emoji:'🍽️',level:'초3-4'},
+  {word:'elephant',meaning:'코끼리',emoji:'🐘',level:'초3-4'},
+  {word:'eraser',meaning:'지우개',emoji:'🧹',level:'초3-4'},
+  {word:'evening',meaning:'저녁',emoji:'🌆',level:'초3-4'},
+  {word:'face',meaning:'얼굴',emoji:'😊',level:'초3-4'},
+  {word:'family',meaning:'가족',emoji:'👨‍👩‍👧‍👦',level:'초3-4'},
+  {word:'fast',meaning:'빠른',emoji:'⚡',level:'초3-4'},
+  {word:'fat',meaning:'뚱뚱한',emoji:'🐷',level:'초3-4'},
+  {word:'father',meaning:'아버지',emoji:'👨',level:'초3-4'},
+  {word:'feet',meaning:'발',emoji:'🦶',level:'초3-4'},
+  {word:'field',meaning:'들판',emoji:'🌾',level:'초3-4'},
+  {word:'find',meaning:'찾다',emoji:'🔍',level:'초3-4'},
+  {word:'fire',meaning:'불',emoji:'🔥',level:'초3-4'},
+  {word:'floor',meaning:'바닥',emoji:'⬜',level:'초3-4'},
+  {word:'food',meaning:'음식',emoji:'🍱',level:'초3-4'},
+  {word:'foot',meaning:'발',emoji:'👣',level:'초3-4'},
+  {word:'forest',meaning:'숲',emoji:'🌲',level:'초3-4'},
+  {word:'friend',meaning:'친구',emoji:'🤝',level:'초3-4'},
+  {word:'front',meaning:'앞',emoji:'⬆️',level:'초3-4'},
+  {word:'fruit',meaning:'과일',emoji:'🍓',level:'초3-4'},
+  {word:'fun',meaning:'재미있는',emoji:'🎉',level:'초3-4'},
+  {word:'game',meaning:'게임',emoji:'🎮',level:'초3-4'},
+  {word:'garden',meaning:'정원',emoji:'🌻',level:'초3-4'},
+  {word:'give',meaning:'주다',emoji:'🎁',level:'초3-4'},
+  {word:'glass',meaning:'유리/잔',emoji:'🥛',level:'초3-4'},
+  {word:'gloves',meaning:'장갑',emoji:'🧤',level:'초3-4'},
+  {word:'go',meaning:'가다',emoji:'🚶',level:'초3-4'},
+  {word:'good',meaning:'좋은',emoji:'👍',level:'초3-4'},
+  {word:'grass',meaning:'풀',emoji:'🌿',level:'초3-4'},
+  {word:'green',meaning:'초록색',emoji:'💚',level:'초3-4'},
+  {word:'grow',meaning:'자라다',emoji:'🌱',level:'초3-4'},
+  {word:'guitar',meaning:'기타',emoji:'🎸',level:'초3-4'},
+  {word:'happy',meaning:'행복한',emoji:'😊',level:'초3-4'},
+  {word:'hard',meaning:'단단한/어려운',emoji:'💎',level:'초3-4'},
+  {word:'head',meaning:'머리',emoji:'🤓',level:'초3-4'},
+  {word:'heart',meaning:'심장/하트',emoji:'❤️',level:'초3-4'},
+  {word:'help',meaning:'도와주다',emoji:'🤲',level:'초3-4'},
+  {word:'hill',meaning:'언덕',emoji:'⛰️',level:'초3-4'},
+  {word:'hot',meaning:'뜨거운',emoji:'🔥',level:'초3-4'},
+  {word:'house',meaning:'집',emoji:'🏡',level:'초3-4'},
+  {word:'hungry',meaning:'배고픈',emoji:'😋',level:'초3-4'},
+  {word:'jump',meaning:'뛰다',emoji:'🏃',level:'초3-4'},
+
+  // 초5-6
+  {word:'accident',meaning:'사고',emoji:'🚨',level:'초5-6'},
+  {word:'achieve',meaning:'성취하다',emoji:'🏆',level:'초5-6'},
+  {word:'action',meaning:'행동',emoji:'⚡',level:'초5-6'},
+  {word:'adult',meaning:'어른',emoji:'🧑',level:'초5-6'},
+  {word:'adventure',meaning:'모험',emoji:'🗺️',level:'초5-6'},
+  {word:'afraid',meaning:'두려운',emoji:'😨',level:'초5-6'},
+  {word:'afternoon',meaning:'오후',emoji:'🌤️',level:'초5-6'},
+  {word:'age',meaning:'나이',emoji:'🎂',level:'초5-6'},
+  {word:'agree',meaning:'동의하다',emoji:'👍',level:'초5-6'},
+  {word:'alien',meaning:'외계인',emoji:'👽',level:'초5-6'},
+  {word:'almost',meaning:'거의',emoji:'🔜',level:'초5-6'},
+  {word:'already',meaning:'이미',emoji:'✅',level:'초5-6'},
+  {word:'always',meaning:'항상',emoji:'♾️',level:'초5-6'},
+  {word:'amazing',meaning:'놀라운',emoji:'🤩',level:'초5-6'},
+  {word:'ancient',meaning:'고대의',emoji:'🏛️',level:'초5-6'},
+  {word:'another',meaning:'또 다른',emoji:'🔄',level:'초5-6'},
+  {word:'appear',meaning:'나타나다',emoji:'✨',level:'초5-6'},
+  {word:'arrive',meaning:'도착하다',emoji:'🏁',level:'초5-6'},
+  {word:'ask',meaning:'묻다',emoji:'❓',level:'초5-6'},
+  {word:'astronaut',meaning:'우주인',emoji:'👨‍🚀',level:'초5-6'},
+  {word:'attention',meaning:'주의',emoji:'⚠️',level:'초5-6'},
+  {word:'autumn',meaning:'가을',emoji:'🍂',level:'초5-6'},
+  {word:'average',meaning:'평균',emoji:'📊',level:'초5-6'},
+  {word:'award',meaning:'상',emoji:'🏆',level:'초5-6'},
+  {word:'awesome',meaning:'대단한',emoji:'🤩',level:'초5-6'},
+  {word:'balance',meaning:'균형',emoji:'⚖️',level:'초5-6'},
+  {word:'beautiful',meaning:'아름다운',emoji:'🌹',level:'초5-6'},
+  {word:'because',meaning:'왜냐하면',emoji:'💡',level:'초5-6'},
+  {word:'become',meaning:'되다',emoji:'🦋',level:'초5-6'},
+  {word:'begin',meaning:'시작하다',emoji:'▶️',level:'초5-6'},
+  {word:'believe',meaning:'믿다',emoji:'💫',level:'초5-6'},
+  {word:'between',meaning:'사이에',emoji:'↔️',level:'초5-6'},
+  {word:'bicycle',meaning:'자전거',emoji:'🚲',level:'초5-6'},
+  {word:'build',meaning:'짓다',emoji:'🏗️',level:'초5-6'},
+  {word:'busy',meaning:'바쁜',emoji:'⏰',level:'초5-6'},
+  {word:'buying',meaning:'구매하는',emoji:'🛒',level:'초5-6'},
+  {word:'celebrate',meaning:'축하하다',emoji:'🎉',level:'초5-6'},
+  {word:'change',meaning:'변하다',emoji:'🔄',level:'초5-6'},
+  {word:'chapter',meaning:'장/단원',emoji:'📖',level:'초5-6'},
+  {word:'character',meaning:'인물/성격',emoji:'🎭',level:'초5-6'},
+  {word:'choose',meaning:'선택하다',emoji:'🤔',level:'초5-6'},
+  {word:'climate',meaning:'기후',emoji:'🌡️',level:'초5-6'},
+  {word:'collect',meaning:'모으다',emoji:'🗂️',level:'초5-6'},
+  {word:'compare',meaning:'비교하다',emoji:'⚖️',level:'초5-6'},
+  {word:'complete',meaning:'완성하다',emoji:'✅',level:'초5-6'},
+  {word:'connect',meaning:'연결하다',emoji:'🔗',level:'초5-6'},
+  {word:'continue',meaning:'계속하다',emoji:'▶️',level:'초5-6'},
+  {word:'control',meaning:'조절하다',emoji:'🎛️',level:'초5-6'},
+  {word:'correct',meaning:'맞는/고치다',emoji:'✔️',level:'초5-6'},
+  {word:'cousin',meaning:'사촌',emoji:'👫',level:'초5-6'},
+
+  // 초5-6 continued
+  {word:'create',meaning:'창조하다',emoji:'🎨',level:'초5-6'},
+  {word:'culture',meaning:'문화',emoji:'🎭',level:'초5-6'},
+  {word:'danger',meaning:'위험',emoji:'⚠️',level:'초5-6'},
+  {word:'decide',meaning:'결정하다',emoji:'💡',level:'초5-6'},
+  {word:'describe',meaning:'설명하다',emoji:'📝',level:'초5-6'},
+  {word:'design',meaning:'디자인',emoji:'✏️',level:'초5-6'},
+  {word:'develop',meaning:'발전하다',emoji:'📈',level:'초5-6'},
+  {word:'different',meaning:'다른',emoji:'🔀',level:'초5-6'},
+  {word:'discover',meaning:'발견하다',emoji:'🔍',level:'초5-6'},
+  {word:'discuss',meaning:'토론하다',emoji:'💬',level:'초5-6'},
+  {word:'distance',meaning:'거리',emoji:'📏',level:'초5-6'},
+  {word:'divide',meaning:'나누다',emoji:'➗',level:'초5-6'},
+  {word:'dolphin',meaning:'돌고래',emoji:'🐬',level:'초5-6'},
+  {word:'dozen',meaning:'12개',emoji:'🔢',level:'초5-6'},
+  {word:'education',meaning:'교육',emoji:'🎓',level:'초5-6'},
+  {word:'effect',meaning:'효과',emoji:'✨',level:'초5-6'},
+  {word:'energy',meaning:'에너지',emoji:'⚡',level:'초5-6'},
+  {word:'enjoy',meaning:'즐기다',emoji:'😄',level:'초5-6'},
+  {word:'environment',meaning:'환경',emoji:'🌍',level:'초5-6'},
+  {word:'escape',meaning:'탈출하다',emoji:'🏃',level:'초5-6'},
+  {word:'every',meaning:'모든',emoji:'🌐',level:'초5-6'},
+  {word:'excellent',meaning:'훌륭한',emoji:'⭐',level:'초5-6'},
+  {word:'exercise',meaning:'운동',emoji:'🏋️',level:'초5-6'},
+  {word:'explain',meaning:'설명하다',emoji:'📣',level:'초5-6'},
+  {word:'explore',meaning:'탐험하다',emoji:'🗺️',level:'초5-6'},
+  {word:'express',meaning:'표현하다',emoji:'😃',level:'초5-6'},
+  {word:'fact',meaning:'사실',emoji:'📋',level:'초5-6'},
+  {word:'fair',meaning:'공정한',emoji:'⚖️',level:'초5-6'},
+  {word:'famous',meaning:'유명한',emoji:'⭐',level:'초5-6'},
+  {word:'favorite',meaning:'좋아하는',emoji:'💖',level:'초5-6'},
+  {word:'finally',meaning:'마침내',emoji:'🏁',level:'초5-6'},
+  {word:'float',meaning:'떠다니다',emoji:'🎈',level:'초5-6'},
+  {word:'follow',meaning:'따르다',emoji:'👣',level:'초5-6'},
+  {word:'foreign',meaning:'외국의',emoji:'🌏',level:'초5-6'},
+  {word:'forever',meaning:'영원히',emoji:'♾️',level:'초5-6'},
+  {word:'forget',meaning:'잊다',emoji:'😶',level:'초5-6'},
+  {word:'freedom',meaning:'자유',emoji:'🗽',level:'초5-6'},
+  {word:'future',meaning:'미래',emoji:'🚀',level:'초5-6'},
+  {word:'gentle',meaning:'부드러운',emoji:'🕊️',level:'초5-6'},
+  {word:'geography',meaning:'지리',emoji:'🗺️',level:'초5-6'},
+  {word:'global',meaning:'세계적인',emoji:'🌍',level:'초5-6'},
+  {word:'goal',meaning:'목표',emoji:'🥅',level:'초5-6'},
+  {word:'government',meaning:'정부',emoji:'🏛️',level:'초5-6'},
+  {word:'graduate',meaning:'졸업하다',emoji:'🎓',level:'초5-6'},
+  {word:'gravity',meaning:'중력',emoji:'⬇️',level:'초5-6'},
+  {word:'habit',meaning:'습관',emoji:'🔁',level:'초5-6'},
+  {word:'healthy',meaning:'건강한',emoji:'💪',level:'초5-6'},
+  {word:'history',meaning:'역사',emoji:'📜',level:'초5-6'},
+  {word:'honest',meaning:'정직한',emoji:'🙏',level:'초5-6'},
+  {word:'hospital',meaning:'병원',emoji:'🏥',level:'초5-6'},
+
+  // 중학교
+  {word:'ability',meaning:'능력',emoji:'💪',level:'중학'},
+  {word:'absence',meaning:'결석',emoji:'❌',level:'중학'},
+  {word:'abstract',meaning:'추상적인',emoji:'🎨',level:'중학'},
+  {word:'academic',meaning:'학문적인',emoji:'📚',level:'중학'},
+  {word:'account',meaning:'계정/설명',emoji:'👤',level:'중학'},
+  {word:'accurate',meaning:'정확한',emoji:'🎯',level:'중학'},
+  {word:'adapt',meaning:'적응하다',emoji:'🔄',level:'중학'},
+  {word:'address',meaning:'주소',emoji:'📮',level:'중학'},
+  {word:'advance',meaning:'발전/전진',emoji:'📈',level:'중학'},
+  {word:'advice',meaning:'조언',emoji:'💬',level:'중학'},
+  {word:'affect',meaning:'영향을 주다',emoji:'🔗',level:'중학'},
+  {word:'against',meaning:'반대하여',emoji:'🆚',level:'중학'},
+  {word:'agriculture',meaning:'농업',emoji:'🌾',level:'중학'},
+  {word:'analyze',meaning:'분석하다',emoji:'🔬',level:'중학'},
+  {word:'announce',meaning:'발표하다',emoji:'📢',level:'중학'},
+  {word:'anxiety',meaning:'불안',emoji:'😰',level:'중학'},
+  {word:'apologize',meaning:'사과하다',emoji:'🙏',level:'중학'},
+  {word:'appreciate',meaning:'감사하다',emoji:'🙏',level:'중학'},
+  {word:'approach',meaning:'접근하다',emoji:'➡️',level:'중학'},
+  {word:'appropriate',meaning:'적절한',emoji:'✅',level:'중학'},
+  {word:'argument',meaning:'논쟁',emoji:'💬',level:'중학'},
+  {word:'arrange',meaning:'정렬하다',emoji:'📋',level:'중학'},
+  {word:'artificial',meaning:'인공적인',emoji:'🤖',level:'중학'},
+  {word:'atmosphere',meaning:'대기/분위기',emoji:'🌫️',level:'중학'},
+  {word:'attitude',meaning:'태도',emoji:'😐',level:'중학'},
+  {word:'attract',meaning:'끌다',emoji:'🧲',level:'중학'},
+  {word:'authority',meaning:'권위',emoji:'👮',level:'중학'},
+  {word:'available',meaning:'이용가능한',emoji:'✅',level:'중학'},
+  {word:'avoid',meaning:'피하다',emoji:'🏃',level:'중학'},
+  {word:'background',meaning:'배경',emoji:'🖼️',level:'중학'},
+  {word:'behavior',meaning:'행동',emoji:'🎭',level:'중학'},
+  {word:'benefit',meaning:'이익',emoji:'💰',level:'중학'},
+  {word:'billion',meaning:'10억',emoji:'💵',level:'중학'},
+  {word:'biology',meaning:'생물학',emoji:'🧬',level:'중학'},
+  {word:'breathe',meaning:'숨쉬다',emoji:'💨',level:'중학'},
+  {word:'budget',meaning:'예산',emoji:'💳',level:'중학'},
+  {word:'calculate',meaning:'계산하다',emoji:'🔢',level:'중학'},
+  {word:'campaign',meaning:'캠페인',emoji:'📣',level:'중학'},
+  {word:'capable',meaning:'할 수 있는',emoji:'💪',level:'중학'},
+  {word:'capital',meaning:'수도/자본',emoji:'🏛️',level:'중학'},
+  {word:'career',meaning:'직업/경력',emoji:'💼',level:'중학'},
+  {word:'cause',meaning:'원인/야기하다',emoji:'🔍',level:'중학'},
+  {word:'century',meaning:'세기',emoji:'📅',level:'중학'},
+  {word:'challenge',meaning:'도전',emoji:'🏆',level:'중학'},
+  {word:'chemistry',meaning:'화학',emoji:'⚗️',level:'중학'},
+  {word:'citizen',meaning:'시민',emoji:'👥',level:'중학'},
+  {word:'civilization',meaning:'문명',emoji:'🏛️',level:'중학'},
+  {word:'communicate',meaning:'소통하다',emoji:'📡',level:'중학'},
+  {word:'community',meaning:'공동체',emoji:'🏘️',level:'중학'},
+  {word:'competition',meaning:'경쟁',emoji:'🏆',level:'중학'},
+  {word:'concept',meaning:'개념',emoji:'💡',level:'중학'},
+
+  // 중학 continued
+  {word:'confident',meaning:'자신감 있는',emoji:'😎',level:'중학'},
+  {word:'conflict',meaning:'갈등',emoji:'⚔️',level:'중학'},
+  {word:'consequence',meaning:'결과',emoji:'🔚',level:'중학'},
+  {word:'consider',meaning:'고려하다',emoji:'🤔',level:'중학'},
+  {word:'construct',meaning:'건설하다',emoji:'🏗️',level:'중학'},
+  {word:'contribute',meaning:'기여하다',emoji:'🤝',level:'중학'},
+  {word:'conversation',meaning:'대화',emoji:'💬',level:'중학'},
+  {word:'convince',meaning:'설득하다',emoji:'👍',level:'중학'},
+  {word:'cooperate',meaning:'협력하다',emoji:'🤝',level:'중학'},
+  {word:'courage',meaning:'용기',emoji:'🦁',level:'중학'},
+  {word:'creative',meaning:'창의적인',emoji:'🎨',level:'중학'},
+  {word:'crime',meaning:'범죄',emoji:'🚨',level:'중학'},
+  {word:'critical',meaning:'비판적인',emoji:'🔍',level:'중학'},
+  {word:'curriculum',meaning:'교육과정',emoji:'📚',level:'중학'},
+  {word:'damage',meaning:'손상',emoji:'💥',level:'중학'},
+  {word:'debate',meaning:'토론',emoji:'🎙️',level:'중학'},
+  {word:'declare',meaning:'선언하다',emoji:'📢',level:'중학'},
+  {word:'decrease',meaning:'감소하다',emoji:'📉',level:'중학'},
+  {word:'define',meaning:'정의하다',emoji:'📖',level:'중학'},
+  {word:'democracy',meaning:'민주주의',emoji:'🗳️',level:'중학'},
+  {word:'depend',meaning:'의존하다',emoji:'🔗',level:'중학'},
+  {word:'deserve',meaning:'자격이 있다',emoji:'🏅',level:'중학'},
+  {word:'determine',meaning:'결정하다',emoji:'💡',level:'중학'},
+  {word:'device',meaning:'기기',emoji:'📱',level:'중학'},
+  {word:'diagram',meaning:'도표',emoji:'📊',level:'중학'},
+  {word:'digital',meaning:'디지털',emoji:'💻',level:'중학'},
+  {word:'direction',meaning:'방향',emoji:'🧭',level:'중학'},
+  {word:'disappear',meaning:'사라지다',emoji:'👻',level:'중학'},
+  {word:'disaster',meaning:'재난',emoji:'🌪️',level:'중학'},
+  {word:'discipline',meaning:'훈련/규율',emoji:'⚖️',level:'중학'},
+  {word:'document',meaning:'문서',emoji:'📄',level:'중학'},
+  {word:'economy',meaning:'경제',emoji:'💹',level:'중학'},
+  {word:'efficient',meaning:'효율적인',emoji:'⚡',level:'중학'},
+  {word:'election',meaning:'선거',emoji:'🗳️',level:'중학'},
+  {word:'emergency',meaning:'비상',emoji:'🚨',level:'중학'},
+  {word:'emotion',meaning:'감정',emoji:'😊',level:'중학'},
+  {word:'encourage',meaning:'격려하다',emoji:'📣',level:'중학'},
+  {word:'engage',meaning:'참여하다',emoji:'🤝',level:'중학'},
+  {word:'enormous',meaning:'거대한',emoji:'🐋',level:'중학'},
+  {word:'enterprise',meaning:'기업',emoji:'🏢',level:'중학'},
+  {word:'equal',meaning:'동등한',emoji:'⚖️',level:'중학'},
+  {word:'essential',meaning:'필수적인',emoji:'⭐',level:'중학'},
+  {word:'establish',meaning:'설립하다',emoji:'🏛️',level:'중학'},
+  {word:'evaluate',meaning:'평가하다',emoji:'📝',level:'중학'},
+  {word:'evidence',meaning:'증거',emoji:'🔍',level:'중학'},
+  {word:'examine',meaning:'검사하다',emoji:'🔬',level:'중학'},
+  {word:'experiment',meaning:'실험',emoji:'⚗️',level:'중학'},
+  {word:'expert',meaning:'전문가',emoji:'🎓',level:'중학'},
+  {word:'extend',meaning:'연장하다',emoji:'📐',level:'중학'},
+  {word:'extreme',meaning:'극도의',emoji:'🌋',level:'중학'},
+];
+
+// Sentences Data
+const sentencesData = [
+  // 인사
+  {en:'Hello! How are you?',ko:'안녕! 어떻게 지내?',category:'인사'},
+  {en:'I am fine, thank you!',ko:'잘 지내, 고마워!',category:'인사'},
+  {en:'Good morning!',ko:'좋은 아침이야!',category:'인사'},
+  {en:'Good night!',ko:'잘 자!',category:'인사'},
+  {en:'Nice to meet you.',ko:'만나서 반가워.',category:'인사'},
+  {en:'See you tomorrow!',ko:'내일 봐!',category:'인사'},
+  {en:'Goodbye! Take care.',ko:'잘 가! 조심해.',category:'인사'},
+  {en:'Welcome!',ko:'환영해!',category:'인사'},
+  {en:'How was your day?',ko:'오늘 어땠어?',category:'인사'},
+  {en:'Long time no see!',ko:'오랜만이야!',category:'인사'},
+
+  // 일상
+  {en:'I wake up at seven o\'clock.',ko:'나는 7시에 일어나.',category:'일상'},
+  {en:'I eat breakfast every morning.',ko:'나는 매일 아침 아침밥을 먹어.',category:'일상'},
+  {en:'I like playing soccer.',ko:'나는 축구하는 걸 좋아해.',category:'일상'},
+  {en:'Let\'s play together!',ko:'같이 놀자!',category:'일상'},
+  {en:'I am hungry. Let\'s eat!',ko:'나 배고파. 밥 먹자!',category:'일상'},
+  {en:'My hobby is reading books.',ko:'내 취미는 책 읽기야.',category:'일상'},
+  {en:'I go to bed at ten.',ko:'나는 10시에 자.',category:'일상'},
+  {en:'Today is a beautiful day!',ko:'오늘 정말 좋은 날이야!',category:'일상'},
+  {en:'I love my family.',ko:'나는 우리 가족을 사랑해.',category:'일상'},
+  {en:'Let me help you.',ko:'내가 도와줄게.',category:'일상'},
+
+  // 학교
+  {en:'I go to school by bus.',ko:'나는 버스를 타고 학교에 가.',category:'학교'},
+  {en:'My favorite subject is math.',ko:'내가 제일 좋아하는 과목은 수학이야.',category:'학교'},
+  {en:'Let\'s study English together.',ko:'같이 영어 공부하자.',category:'학교'},
+  {en:'I have homework today.',ko:'오늘 숙제가 있어.',category:'학교'},
+  {en:'The teacher is very kind.',ko:'선생님이 아주 친절해.',category:'학교'},
+  {en:'I forgot my pencil.',ko:'연필을 깜빡했어.',category:'학교'},
+  {en:'Can I borrow your eraser?',ko:'지우개 빌려줄 수 있어?',category:'학교'},
+  {en:'We have a test tomorrow.',ko:'내일 시험이 있어.',category:'학교'},
+  {en:'The library is my favorite place.',ko:'도서관이 내가 제일 좋아하는 곳이야.',category:'학교'},
+  {en:'I got a perfect score!',ko:'나 100점 받았어!',category:'학교'},
+
+  // 감정
+  {en:'I am very happy today!',ko:'나 오늘 정말 행복해!',category:'감정'},
+  {en:'I feel sad.',ko:'나 슬퍼.',category:'감정'},
+  {en:'Don\'t worry, be happy!',ko:'걱정하지 마, 행복해!',category:'감정'},
+  {en:'I am so excited!',ko:'나 너무 신나!',category:'감정'},
+  {en:'I am scared of the dark.',ko:'나 어둠이 무서워.',category:'감정'},
+  {en:'I feel tired today.',ko:'오늘 피곤해.',category:'감정'},
+  {en:'I am angry!',ko:'나 화났어!',category:'감정'},
+  {en:'I am bored.',ko:'심심해.',category:'감정'},
+  {en:'I feel nervous.',ko:'긴장돼.',category:'감정'},
+  {en:'You make me smile!',ko:'네가 날 웃게 해!',category:'감정'},
+
+  // 질문
+  {en:'What is your name?',ko:'이름이 뭐야?',category:'질문'},
+  {en:'How old are you?',ko:'몇 살이야?',category:'질문'},
+  {en:'Where are you from?',ko:'어디서 왔어?',category:'질문'},
+  {en:'What do you want to eat?',ko:'뭐 먹고 싶어?',category:'질문'},
+  {en:'Can you help me please?',ko:'나 좀 도와줄 수 있어?',category:'질문'},
+  {en:'What time is it?',ko:'몇 시야?',category:'질문'},
+  {en:'Why are you late?',ko:'왜 늦었어?',category:'질문'},
+  {en:'Do you like pizza?',ko:'피자 좋아해?',category:'질문'},
+  {en:'What is your favorite color?',ko:'좋아하는 색깔이 뭐야?',category:'질문'},
+  {en:'Where is the bathroom?',ko:'화장실이 어디야?',category:'질문'},
+
+  // 숫자/색
+  {en:'I have two cats and one dog.',ko:'나는 고양이 두 마리와 개 한 마리가 있어.',category:'숫자'},
+  {en:'The sky is blue.',ko:'하늘은 파란색이야.',category:'숫자'},
+  {en:'I see ten birds in the tree.',ko:'나무에 새 10마리가 있어.',category:'숫자'},
+  {en:'My favorite color is red.',ko:'내가 제일 좋아하는 색은 빨간색이야.',category:'숫자'},
+  {en:'There are five apples on the table.',ko:'테이블에 사과가 5개 있어.',category:'숫자'},
+  {en:'The rainbow has seven colors.',ko:'무지개는 7가지 색이 있어.',category:'숫자'},
+  {en:'I am eight years old.',ko:'나는 8살이야.',category:'숫자'},
+  {en:'She has three brothers.',ko:'그녀는 남동생이 3명 있어.',category:'숫자'},
+  {en:'The green grass is soft.',ko:'초록 풀이 부드러워.',category:'숫자'},
+  {en:'Count from one to ten!',ko:'1부터 10까지 세어봐!',category:'숫자'},
+];
+
+// ===================== STATE =====================
+let currentLevel = 'all';
+let currentSentenceFilter = 'all';
+let learnedWords = new Set();
+let searchQuery = '';
+let mixedMode = 'ordered';
+
+// ===================== FUNCTIONS =====================
+
+function showSection(name) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('section-' + name).classList.add('active');
+  const btns = document.querySelectorAll('nav button');
+  const sectionMap = {alphabet:0,lowercase:1,mixed:2,words:3,sentences:4};
+  btns[sectionMap[name]].classList.add('active');
+}
+
+function speak(text, lang = 'en-US') {
+  window.speechSynthesis.cancel();
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = lang;
+  utter.rate = 0.85;
+  utter.pitch = 1.1;
+  window.speechSynthesis.speak(utter);
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 1500);
+}
+
+function playAlpha(card, text, isUpper) {
+  document.querySelectorAll('.alpha-card').forEach(c => c.classList.remove('playing'));
+  card.classList.add('playing');
+  card.classList.add('pulse');
+  setTimeout(() => { card.classList.remove('playing'); card.classList.remove('pulse'); }, 1200);
+  speak(isUpper ? 'Capital ' + text : text);
+  showToast('🔊 ' + text);
+}
+
+function buildUppercase() {
+  const grid = document.getElementById('uppercase-grid');
+  grid.innerHTML = '';
+  alphabetData.forEach((a, i) => {
+    const card = document.createElement('div');
+    card.className = 'alpha-card';
+    card.style.background = `linear-gradient(135deg, ${colors[i]}22, ${colors[i]}44)`;
+    card.style.borderColor = colors[i] + '33';
+    card.innerHTML = `<div class="big-letter" style="color:${colors[i]}">${a.upper}</div>
+      <div class="sound-label">${a.phonics}</div>`;
+    card.onclick = () => playAlpha(card, a.upper, true);
+    grid.appendChild(card);
+  });
+}
+
+function buildLowercase() {
+  const grid = document.getElementById('lowercase-grid');
+  grid.innerHTML = '';
+  alphabetData.forEach((a, i) => {
+    const card = document.createElement('div');
+    card.className = 'alpha-card';
+    card.style.background = `linear-gradient(135deg, ${colors[(i+13)%26]}22, ${colors[(i+13)%26]}44)`;
+    card.innerHTML = `<div class="big-letter" style="color:${colors[(i+13)%26]}">${a.lower}</div>
+      <div class="sound-label">${a.phonics}</div>`;
+    card.onclick = () => playAlpha(card, a.lower, false);
+    grid.appendChild(card);
+  });
+}
+
+function buildMixed(shuffled = false) {
+  const grid = document.getElementById('mixed-grid');
+  grid.innerHTML = '';
+  let data = [];
+  alphabetData.forEach((a, i) => {
+    data.push({letter: a.upper, phonics: a.phonics, isUpper: true, color: colors[i]});
+    data.push({letter: a.lower, phonics: a.phonics, isUpper: false, color: colors[(i+7)%26]});
+  });
+  if (shuffled) {
+    for (let i = data.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [data[i], data[j]] = [data[j], data[i]];
+    }
+  }
+  data.forEach((a) => {
+    const card = document.createElement('div');
+    card.className = 'alpha-card';
+    card.style.background = `linear-gradient(135deg, ${a.color}22, ${a.color}44)`;
+    card.innerHTML = `<div class="big-letter" style="color:${a.color}">${a.letter}</div>
+      <div class="sound-label">${a.isUpper ? '대문자' : '소문자'}</div>`;
+    card.onclick = () => playAlpha(card, a.letter, a.isUpper);
+    grid.appendChild(card);
+  });
+}
+
+function shuffleMixed(btn) {
+  document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  buildMixed(true);
+}
+function resetMixed(btn) {
+  document.querySelectorAll('.mode-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  buildMixed(false);
+}
+
+function buildWords() {
+  const grid = document.getElementById('words-grid');
+  grid.innerHTML = '';
+  let filtered = wordsData.filter(w => {
+    const levelMatch = currentLevel === 'all' || w.level === currentLevel;
+    const searchMatch = searchQuery === '' || w.word.toLowerCase().includes(searchQuery) || w.meaning.includes(searchQuery);
+    return levelMatch && searchMatch;
+  });
+  document.getElementById('word-count').textContent = filtered.length;
+  document.getElementById('learned-count').textContent = learnedWords.size;
+
+  filtered.forEach(w => {
+    const card = document.createElement('div');
+    card.className = 'word-card' + (learnedWords.has(w.word) ? ' playing' : '');
+    card.innerHTML = `<div class="word-emoji">${w.emoji}</div>
+      <div class="word-text">${w.word}</div>
+      <div class="word-meaning">${w.meaning}</div>
+      <div class="word-level">${w.level}</div>`;
+    card.onclick = () => {
+      card.classList.add('playing');
+      learnedWords.add(w.word);
+      document.getElementById('learned-count').textContent = learnedWords.size;
+      speak(w.word);
+      showToast('🔊 ' + w.word + ' - ' + w.meaning);
+      setTimeout(() => card.classList.remove('playing'), 1500);
+    };
+    grid.appendChild(card);
+  });
+}
+
+function filterLevel(level, btn) {
+  currentLevel = level;
+  document.querySelectorAll('.level-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+  buildWords();
+}
+
+function filterWords(q) {
+  searchQuery = q.toLowerCase();
+  buildWords();
+}
+
+function buildSentences() {
+  const container = document.getElementById('sentences-container');
+  container.innerHTML = '';
+  let filtered = currentSentenceFilter === 'all' ? sentencesData : sentencesData.filter(s => s.category === currentSentenceFilter);
+  
+  filtered.forEach((s, i) => {
+    const card = document.createElement('div');
+    card.className = 'sentence-card';
+    card.style.borderLeftColor = ['#ff6b6b','#feca57','#48dbfb','#ff9ff3','#54a0ff','#5f27cd'][i % 6];
+    card.innerHTML = `<span class="sentence-category">${s.category}</span>
+      <div class="sentence-en">${s.en}</div>
+      <div class="sentence-ko">${s.ko}</div>
+      <button class="btn-speak" onclick="speakSentence(this, '${s.en.replace(/'/g,"\\'")}')">🔊 들어보기</button>`;
+    container.appendChild(card);
+  });
+}
+
+function speakSentence(btn, text) {
+  btn.textContent = '🔊 재생 중...';
+  btn.disabled = true;
+  speak(text);
+  showToast('🔊 문장 재생 중...');
+  setTimeout(() => { btn.textContent = '🔊 들어보기'; btn.disabled = false; }, 2500);
+}
+
+function filterSentence(cat, btn) {
+  currentSentenceFilter = cat;
+  document.querySelectorAll('.sentence-filter button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  buildSentences();
+}
+
+// ===================== FIRESTORE SYNC =====================
+function syncProgress() {
+  // Save learned words to Firestore
+  db.collection("apps/app-500-mtmcdo6u/items").doc("learnedWords").set({
+    words: Array.from(learnedWords),
+    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  });
+}
+
+function loadProgress() {
+  db.collection("apps/app-500-mtmcdo6u/items").doc("learnedWords").get().then(doc => {
+    if (doc.exists && doc.data().words) {
+      learnedWords = new Set(doc.data().words);
+      buildWords();
+    }
+  });
+}
+
+// Also track clicks in Firestore
+function logActivity(type, value) {
+  db.collection("apps/app-500-mtmcdo6u/items").add({
+    type: type,
+    value: value,
+    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+  });
+}
+
+// Patch word card click to also sync
+const origBuildWords = buildWords;
+
+// ===================== INIT =====================
+buildUppercase();
+buildLowercase();
+buildMixed(false);
+buildWords();
+buildSentences();
+loadProgress();
+
+// Auto-sync every 30 seconds
+setInterval(() => {
+  if (learnedWords.size > 0) syncProgress();
+}, 30000);
+
+</script>
+</body>
+</html>
