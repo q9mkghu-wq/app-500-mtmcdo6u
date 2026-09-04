@@ -891,7 +891,7 @@ function playAlpha(card, text, isUpper) {
   card.classList.add('playing');
   card.classList.add('pulse');
   setTimeout(() => { card.classList.remove('playing'); card.classList.remove('pulse'); }, 1200);
-  speak(isUpper ? 'Capital ' + text : text);
+  speak(text);
   showToast('🔊 ' + text);
 }
 
