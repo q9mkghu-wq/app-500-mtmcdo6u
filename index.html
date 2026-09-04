@@ -903,8 +903,7 @@ function buildUppercase() {
     card.className = 'alpha-card';
     card.style.background = `linear-gradient(135deg, ${colors[i]}22, ${colors[i]}44)`;
     card.style.borderColor = colors[i] + '33';
-    card.innerHTML = `<div class="big-letter" style="color:${colors[i]}">${a.upper}</div>
-      <div class="sound-label">${a.phonics}</div>`;
+    card.innerHTML = `<div class="big-letter" style="color:${colors[i]}">${a.upper}</div>`;
     card.onclick = () => playAlpha(card, a.upper, true);
     grid.appendChild(card);
   });
@@ -917,8 +916,7 @@ function buildLowercase() {
     const card = document.createElement('div');
     card.className = 'alpha-card';
     card.style.background = `linear-gradient(135deg, ${colors[(i+13)%26]}22, ${colors[(i+13)%26]}44)`;
-    card.innerHTML = `<div class="big-letter" style="color:${colors[(i+13)%26]}">${a.lower}</div>
-      <div class="sound-label">${a.phonics}</div>`;
+    card.innerHTML = `<div class="big-letter" style="color:${colors[(i+13)%26]}">${a.lower}</div>`;
     card.onclick = () => playAlpha(card, a.lower, false);
     grid.appendChild(card);
   });
@@ -942,8 +940,7 @@ function buildMixed(shuffled = false) {
     const card = document.createElement('div');
     card.className = 'alpha-card';
     card.style.background = `linear-gradient(135deg, ${a.color}22, ${a.color}44)`;
-    card.innerHTML = `<div class="big-letter" style="color:${a.color}">${a.letter}</div>
-      <div class="sound-label">${a.isUpper ? '대문자' : '소문자'}</div>`;
+    card.innerHTML = `<div class="big-letter" style="color:${a.color}">${a.letter}</div>`;
     card.onclick = () => playAlpha(card, a.letter, a.isUpper);
     grid.appendChild(card);
   });
