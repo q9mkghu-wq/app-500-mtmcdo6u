@@ -272,6 +272,117 @@
   }
   .search-box:focus { border-color: #667eea; }
 
+  /* View toggle (한글만 / 영어만 / 둘 다) */
+  .view-toggle {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 15px;
+  }
+  .view-toggle button {
+    padding: 8px 18px;
+    border-radius: 20px;
+    border: 2px solid #ff9800;
+    background: white;
+    color: #ff9800;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.85em;
+    transition: all 0.2s;
+  }
+  .view-toggle button.active { background: #ff9800; color: white; }
+  .view-toggle.alt button { border-color: #764ba2; color: #764ba2; }
+  .view-toggle.alt button.active { background: #764ba2; color: white; }
+
+  .word-card .word-hidden { font-size: 0.85em; color: #aaa; padding: 10px 0; font-weight: 600; }
+  .btn-known {
+    margin-top: 8px;
+    padding: 5px 12px;
+    border: none;
+    border-radius: 14px;
+    background: #e8f5e9;
+    color: #2e7d32;
+    font-size: 0.75em;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .btn-known:hover { background: #c8e6c9; }
+  .btn-known.undo { background: #eee; color: #666; }
+  .empty-msg {
+    text-align: center;
+    padding: 30px 10px;
+    color: #667eea;
+    font-weight: 700;
+    font-size: 1.1em;
+    grid-column: 1 / -1;
+  }
+
+  /* Sentence memorization */
+  .sentence-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  .sentence-head .sentence-category { margin-bottom: 0; }
+  .sentence-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 32px;
+    height: 32px;
+    padding: 0 8px;
+    border-radius: 16px;
+    background: #667eea;
+    color: white;
+    font-weight: 700;
+    font-size: 0.85em;
+  }
+  .badge-done {
+    padding: 3px 10px;
+    background: #e8f5e9;
+    color: #2e7d32;
+    border-radius: 10px;
+    font-size: 0.75em;
+    font-weight: 700;
+  }
+  .sentence-card.done { background: #f4fff5; border-left-color: #4caf50 !important; }
+  .sentence-hidden {
+    font-size: 1em;
+    color: #bbb;
+    font-weight: 600;
+    padding: 10px;
+    margin-bottom: 8px;
+    border: 2px dashed #ddd;
+    border-radius: 10px;
+    text-align: center;
+  }
+  .review-row { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .review-label { font-size: 0.85em; font-weight: 700; color: #667eea; }
+  .dots .dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: #e0e0e0; margin-right: 4px; }
+  .dots .dot.on { background: #4caf50; }
+  .sentence-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn-review, .btn-reveal, .btn-undo {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.9em;
+    font-weight: 600;
+    transition: all 0.2s;
+  }
+  .btn-review { background: linear-gradient(135deg, #4caf50, #2e7d32); color: white; }
+  .btn-reveal { background: #fff3cd; color: #b26a00; }
+  .btn-undo { background: #eee; color: #666; }
+  .btn-review:hover, .btn-reveal:hover, .btn-undo:hover { transform: scale(1.05); }
+  .reset-btn {
+    display: block;
+    margin: 0 auto 20px;
+    padding: 6px 14px;
+    border: 1px solid #ccc;
+    border-radius: 15px;
+    background: white;
+    color: #999;
+    font-size: 0.75em;
+    cursor: pointer;
+  }
+
   @media (max-width: 600px) {
     header h1 { font-size: 1.5em; }
     nav button { font-size: 0.8em; padding: 8px 12px; }
@@ -342,8 +453,18 @@
   <div class="stats-bar">
     <div class="stat-box"><div class="stat-num" id="word-count">500</div><div class="stat-label">전체 단어</div></div>
     <div class="stat-box"><div class="stat-num" id="learned-count">0</div><div class="stat-label">학습한 단어</div></div>
+    <div class="stat-box"><div class="stat-num" id="known-count">0</div><div class="stat-label">외운 단어</div></div>
   </div>
   <input type="text" class="search-box" placeholder="🔍 단어 검색..." oninput="filterWords(this.value)">
+  <div class="view-toggle" id="word-view-toggle">
+    <button class="active" onclick="setWordView('both', this)">👀 둘 다</button>
+    <button onclick="setWordView('en', this)">🇺🇸 영어만</button>
+    <button onclick="setWordView('ko', this)">🇰🇷 한글만</button>
+  </div>
+  <div class="view-toggle">
+    <button class="active" id="btn-hide-known" onclick="toggleHideKnown()">🙈 외운 단어 숨김</button>
+    <button onclick="resetKnownWords()" style="border-color:#999;color:#999;">🔄 외운 단어 초기화</button>
+  </div>
   <div class="level-tabs">
     <button class="level-tab active" onclick="filterLevel('all', this)">전체</button>
     <button class="level-tab" onclick="filterLevel('초1-2', this)">초1-2학년</button>
@@ -357,6 +478,20 @@
 <!-- SENTENCES -->
 <div id="section-sentences" class="section">
   <h2 class="section-title">💬 문장 연습</h2>
+  <div class="stats-bar">
+    <div class="stat-box"><div class="stat-num" id="sentence-total">0</div><div class="stat-label">전체 문장</div></div>
+    <div class="stat-box"><div class="stat-num" id="sentence-mastered">0</div><div class="stat-label">암기 완료 (5회+)</div></div>
+    <div class="stat-box"><div class="stat-num" id="sentence-reviews">0</div><div class="stat-label">총 복습 횟수</div></div>
+  </div>
+  <div class="view-toggle alt" id="sentence-view-toggle">
+    <button class="active" onclick="setSentenceView('both', this)">👀 둘 다</button>
+    <button onclick="setSentenceView('en', this)">🇺🇸 영어만</button>
+    <button onclick="setSentenceView('ko', this)">🇰🇷 한글만</button>
+  </div>
+  <div class="view-toggle alt">
+    <button class="active" id="btn-hide-mastered" onclick="toggleHideMastered()">🙈 암기한 문장 숨김</button>
+  </div>
+  <button class="reset-btn" onclick="resetReviews()">🔄 복습 기록 초기화</button>
   <div class="sentence-filter">
     <button class="active" onclick="filterSentence('all', this)">전체</button>
     <button onclick="filterSentence('인사', this)">👋 인사</button>
@@ -858,6 +993,22 @@ let currentSentenceFilter = 'all';
 let learnedWords = new Set();
 let searchQuery = '';
 let mixedMode = 'ordered';
+let wordView = 'both';          // 'both' | 'en' | 'ko'
+let sentenceView = 'both';      // 'both' | 'en' | 'ko'
+const MASTER_COUNT = 5;         // 이 횟수 이상 복습하면 암기 완료
+let sentenceReviews = {};       // { 문장번호: 복습횟수 }
+const revealedSentences = new Set();
+let hideMastered = true;        // 암기 완료된 문장 숨기기 (기본 켜짐)
+let hideKnown = true;           // 외운 단어 숨기기 (기본 켜짐)
+let knownWords = new Set();     // '외웠어요'로 표시한 단어
+try {
+  if (localStorage.getItem('hideMastered') === '0') hideMastered = false;
+  if (localStorage.getItem('hideKnown') === '0') hideKnown = false;
+  knownWords = new Set(JSON.parse(localStorage.getItem('knownWords') || '[]'));
+} catch (e) {}
+try {
+  sentenceReviews = JSON.parse(localStorage.getItem('sentenceReviews') || '{}');
+} catch (e) { sentenceReviews = {}; }
 
 // ===================== FUNCTIONS =====================
 
@@ -963,28 +1114,113 @@ function buildWords() {
   let filtered = wordsData.filter(w => {
     const levelMatch = currentLevel === 'all' || w.level === currentLevel;
     const searchMatch = searchQuery === '' || w.word.toLowerCase().includes(searchQuery) || w.meaning.includes(searchQuery);
-    return levelMatch && searchMatch;
+    const knownMatch = !(hideKnown && knownWords.has(w.word));
+    return levelMatch && searchMatch && knownMatch;
   });
   document.getElementById('word-count').textContent = filtered.length;
   document.getElementById('learned-count').textContent = learnedWords.size;
+  document.getElementById('known-count').textContent = knownWords.size;
+
+  const hideBtn = document.getElementById('btn-hide-known');
+  if (hideBtn) {
+    hideBtn.classList.toggle('active', hideKnown);
+    hideBtn.textContent = hideKnown
+      ? '🙈 외운 단어 숨김 (' + knownWords.size + '개 숨겨짐) · 누르면 다시 보기'
+      : '👀 외운 단어도 보는 중 · 누르면 숨기기';
+  }
+  if (filtered.length === 0) {
+    const msg = document.createElement('div');
+    msg.className = 'empty-msg';
+    msg.textContent = (knownWords.size > 0 && hideKnown && searchQuery === '')
+      ? '🎉 이 단계의 단어를 모두 외웠어요! 다른 단계를 골라보세요.'
+      : '보여줄 단어가 없어요.';
+    grid.appendChild(msg);
+  }
 
   filtered.forEach(w => {
     const card = document.createElement('div');
     card.className = 'word-card' + (learnedWords.has(w.word) ? ' playing' : '');
-    card.innerHTML = `<div class="word-emoji">${w.emoji}</div>
-      <div class="word-text">${w.word}</div>
-      <div class="word-meaning">${w.meaning}</div>
-      <div class="word-level">${w.level}</div>`;
+    let revealed = false;
+
+    const render = () => {
+      const showEn = wordView !== 'ko' || revealed;
+      const showKo = wordView !== 'en' || revealed;
+      card.innerHTML = `<div class="word-emoji">${w.emoji}</div>
+        ${showEn ? `<div class="word-text">${w.word}</div>` : `<div class="word-hidden">❓ 영어는?</div>`}
+        ${showKo ? `<div class="word-meaning">${w.meaning}</div>` : `<div class="word-hidden">❓ 뜻은?</div>`}
+        <div class="word-level">${w.level}</div>
+        <button class="btn-known${knownWords.has(w.word) ? ' undo' : ''}">${knownWords.has(w.word) ? '↩️ 다시 학습' : '✅ 외웠어요'}</button>`;
+      card.querySelector('.btn-known').onclick = (e) => {
+        e.stopPropagation();   // 카드 클릭(소리/정답)과 구분
+        if (knownWords.has(w.word)) {
+          knownWords.delete(w.word);
+          showToast('↩️ ' + w.word + ' 다시 학습 목록으로');
+        } else {
+          knownWords.add(w.word);
+          showToast('✅ ' + w.word + ' 외웠어요!');
+        }
+        saveKnownWords();
+        buildWords();
+      };
+    };
+    render();
+
     card.onclick = () => {
       card.classList.add('playing');
       learnedWords.add(w.word);
       document.getElementById('learned-count').textContent = learnedWords.size;
       speak(w.word);
+      if (wordView !== 'both') {
+        revealed = !revealed;   // 누르면 정답이 보이고, 다시 누르면 숨겨져요
+        render();
+      }
       showToast('🔊 ' + w.word + ' - ' + w.meaning);
       setTimeout(() => card.classList.remove('playing'), 1500);
     };
     grid.appendChild(card);
   });
+}
+
+function saveKnownWords() {
+  try { localStorage.setItem('knownWords', JSON.stringify(Array.from(knownWords))); } catch (e) {}
+  try {
+    db.collection("apps/app-500-mtmcdo6u/items").doc("knownWords").set({
+      words: Array.from(knownWords),
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }).catch(() => {});
+  } catch (e) {}
+}
+
+function loadKnownWords() {
+  try {
+    db.collection("apps/app-500-mtmcdo6u/items").doc("knownWords").get().then(doc => {
+      if (doc.exists && doc.data().words) {
+        doc.data().words.forEach(w => knownWords.add(w));   // 기기마다 다르면 합쳐요
+        try { localStorage.setItem('knownWords', JSON.stringify(Array.from(knownWords))); } catch (e) {}
+        buildWords();
+      }
+    }).catch(() => {});
+  } catch (e) {}
+}
+
+function toggleHideKnown() {
+  hideKnown = !hideKnown;
+  try { localStorage.setItem('hideKnown', hideKnown ? '1' : '0'); } catch (e) {}
+  buildWords();
+}
+
+function resetKnownWords() {
+  if (!confirm('외운 단어 기록을 모두 지울까요?')) return;
+  knownWords = new Set();
+  saveKnownWords();
+  buildWords();
+}
+
+function setWordView(mode, btn) {
+  wordView = mode;
+  document.querySelectorAll('#word-view-toggle button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  buildWords();
 }
 
 function filterLevel(level, btn) {
@@ -999,21 +1235,139 @@ function filterWords(q) {
   buildWords();
 }
 
+const sentenceColors = ['#ff6b6b','#feca57','#48dbfb','#ff9ff3','#54a0ff','#5f27cd'];
+
+// 문장 번호는 전체 목록 기준(1번~)이라 필터를 바꿔도 번호가 그대로예요
+function renderSentenceCard(idx) {
+  const s = sentencesData[idx];
+  const count = sentenceReviews[idx] || 0;
+  const mastered = count >= MASTER_COUNT;
+  const revealed = revealedSentences.has(idx);
+  const showEn = sentenceView !== 'ko' || revealed;
+  const showKo = sentenceView !== 'en' || revealed;
+  const hiddenMode = sentenceView !== 'both';
+
+  const card = document.createElement('div');
+  card.className = 'sentence-card' + (mastered ? ' done' : '');
+  card.dataset.idx = idx;
+  card.style.borderLeftColor = sentenceColors[idx % 6];
+
+  let dots = '';
+  for (let d = 0; d < MASTER_COUNT; d++) dots += `<span class="dot${d < count ? ' on' : ''}"></span>`;
+
+  card.innerHTML = `
+    <div class="sentence-head">
+      <span class="sentence-num">${idx + 1}</span>
+      <span class="sentence-category">${s.category}</span>
+      ${mastered ? '<span class="badge-done">🏆 암기 완료!</span>' : ''}
+    </div>
+    ${showEn ? `<div class="sentence-en">${s.en}</div>` : `<div class="sentence-hidden">❓ 영어로 말해볼까요?</div>`}
+    ${showKo ? `<div class="sentence-ko">${s.ko}</div>` : `<div class="sentence-hidden">❓ 무슨 뜻일까요?</div>`}
+    <div class="review-row">
+      <span class="review-label">복습 ${count}회</span>
+      <span class="dots">${dots}</span>
+    </div>
+    <div class="sentence-actions">
+      <button class="btn-speak" data-act="speak">🔊 들어보기</button>
+      ${hiddenMode ? `<button class="btn-reveal" data-act="reveal">${revealed ? '🙈 가리기' : '👁️ 정답 보기'}</button>` : ''}
+      <button class="btn-review" data-act="review">✅ 복습 완료 (+1)</button>
+      ${count > 0 ? '<button class="btn-undo" data-act="undo">↩️ -1</button>' : ''}
+    </div>`;
+
+  card.querySelector('[data-act="speak"]').onclick = (e) => speakSentence(e.currentTarget, s.en);
+  const revealBtn = card.querySelector('[data-act="reveal"]');
+  if (revealBtn) revealBtn.onclick = () => {
+    if (revealedSentences.has(idx)) revealedSentences.delete(idx); else revealedSentences.add(idx);
+    refreshSentenceCard(idx);
+  };
+  card.querySelector('[data-act="review"]').onclick = () => changeReview(idx, +1);
+  const undoBtn = card.querySelector('[data-act="undo"]');
+  if (undoBtn) undoBtn.onclick = () => changeReview(idx, -1);
+  return card;
+}
+
+function refreshSentenceCard(idx) {
+  const old = document.querySelector(`#sentences-container .sentence-card[data-idx="${idx}"]`);
+  if (old) old.replaceWith(renderSentenceCard(idx));
+}
+
+function updateSentenceStats() {
+  const counts = sentencesData.map((_, i) => sentenceReviews[i] || 0);
+  document.getElementById('sentence-total').textContent = sentencesData.length;
+  document.getElementById('sentence-mastered').textContent = counts.filter(c => c >= MASTER_COUNT).length;
+  document.getElementById('sentence-reviews').textContent = counts.reduce((a, b) => a + b, 0);
+}
+
+function saveReviews() {
+  try { localStorage.setItem('sentenceReviews', JSON.stringify(sentenceReviews)); } catch (e) {}
+  syncSentenceReviews();
+}
+
+function changeReview(idx, delta) {
+  const next = Math.max(0, (sentenceReviews[idx] || 0) + delta);
+  sentenceReviews[idx] = next;
+  saveReviews();
+  refreshSentenceCard(idx);
+  updateSentenceStats();
+  if (delta > 0) {
+    showToast(next === MASTER_COUNT ? '🏆 ' + (idx + 1) + '번 문장 암기 완료!' : '✅ ' + (idx + 1) + '번 복습 ' + next + '회');
+  }
+  // 암기 완료된 카드는 잠깐 축하 표시를 보여준 뒤 목록에서 사라져요
+  if (hideMastered && delta > 0 && next >= MASTER_COUNT) {
+    setTimeout(() => {
+      if ((sentenceReviews[idx] || 0) >= MASTER_COUNT && hideMastered) buildSentences();
+    }, 900);
+  }
+}
+
+function toggleHideMastered() {
+  hideMastered = !hideMastered;
+  try { localStorage.setItem('hideMastered', hideMastered ? '1' : '0'); } catch (e) {}
+  buildSentences();
+}
+
+function resetReviews() {
+  if (!confirm('복습 기록을 모두 지울까요?')) return;
+  sentenceReviews = {};
+  revealedSentences.clear();
+  saveReviews();
+  buildSentences();
+}
+
 function buildSentences() {
   const container = document.getElementById('sentences-container');
   container.innerHTML = '';
-  let filtered = currentSentenceFilter === 'all' ? sentencesData : sentencesData.filter(s => s.category === currentSentenceFilter);
-  
-  filtered.forEach((s, i) => {
-    const card = document.createElement('div');
-    card.className = 'sentence-card';
-    card.style.borderLeftColor = ['#ff6b6b','#feca57','#48dbfb','#ff9ff3','#54a0ff','#5f27cd'][i % 6];
-    card.innerHTML = `<span class="sentence-category">${s.category}</span>
-      <div class="sentence-en">${s.en}</div>
-      <div class="sentence-ko">${s.ko}</div>
-      <button class="btn-speak" onclick="speakSentence(this, '${s.en.replace(/'/g,"\\'")}')">🔊 들어보기</button>`;
-    container.appendChild(card);
+  let shown = 0, hiddenCount = 0;
+  sentencesData.forEach((s, idx) => {
+    if (currentSentenceFilter !== 'all' && s.category !== currentSentenceFilter) return;
+    if (hideMastered && (sentenceReviews[idx] || 0) >= MASTER_COUNT) { hiddenCount++; return; }
+    container.appendChild(renderSentenceCard(idx));
+    shown++;
   });
+  if (shown === 0) {
+    const msg = document.createElement('div');
+    msg.className = 'empty-msg';
+    msg.textContent = hiddenCount > 0
+      ? '🎉 이 카테고리는 모두 암기 완료! 다른 카테고리를 골라보세요.'
+      : '문장이 없어요.';
+    container.appendChild(msg);
+  }
+  const btn = document.getElementById('btn-hide-mastered');
+  if (btn) {
+    btn.classList.toggle('active', hideMastered);
+    btn.textContent = hideMastered
+      ? '🙈 암기한 문장 숨김 (' + hiddenCount + '개 숨겨짐) · 누르면 다시 보기'
+      : '👀 암기한 문장도 보는 중 · 누르면 숨기기';
+  }
+  updateSentenceStats();
+}
+
+function setSentenceView(mode, btn) {
+  sentenceView = mode;
+  revealedSentences.clear();
+  document.querySelectorAll('#sentence-view-toggle button').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  buildSentences();
 }
 
 function speakSentence(btn, text) {
@@ -1038,6 +1392,31 @@ function syncProgress() {
     words: Array.from(learnedWords),
     updatedAt: firebase.firestore.FieldValue.serverTimestamp()
   });
+}
+
+function syncSentenceReviews() {
+  try {
+    db.collection("apps/app-500-mtmcdo6u/items").doc("sentenceReviews").set({
+      reviews: sentenceReviews,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }).catch(() => {});
+  } catch (e) {}
+}
+
+function loadSentenceReviews() {
+  try {
+    db.collection("apps/app-500-mtmcdo6u/items").doc("sentenceReviews").get().then(doc => {
+      if (doc.exists && doc.data().reviews) {
+        // 기기마다 기록이 다르면 더 큰 횟수를 사용해요
+        const remote = doc.data().reviews;
+        Object.keys(remote).forEach(k => {
+          sentenceReviews[k] = Math.max(sentenceReviews[k] || 0, remote[k] || 0);
+        });
+        try { localStorage.setItem('sentenceReviews', JSON.stringify(sentenceReviews)); } catch (e) {}
+        buildSentences();
+      }
+    }).catch(() => {});
+  } catch (e) {}
 }
 
 function loadProgress() {
@@ -1068,6 +1447,8 @@ buildMixed(false);
 buildWords();
 buildSentences();
 loadProgress();
+loadSentenceReviews();
+loadKnownWords();
 
 // Auto-sync every 30 seconds
 setInterval(() => {
